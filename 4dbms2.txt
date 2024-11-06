@@ -1,0 +1,58 @@
+create table borrowers(
+    roll_no INT,
+    name VARCHAR(20),
+    issue_date DATE,
+    book_name VARCHAR(20),
+    status CHAR(10),
+    primary key( roll_no )
+);
+
+create table fines(
+    roll_no INT,
+    fine_date DATE,
+    amt INT,
+    foreign key( roll_no ) references borrowers( roll_no )
+);
+
+insert into borrowers values
+( 1 , 'p1' , '2024-10-31' , 'b1' , 'I' ) , 
+( 2 , 'p2' , '2024-10-17' , 'b2' , 'I' ) , 
+( 3 , 'p2' , '2024-10-15' , 'b3' , 'I' ) , 
+( 4 , 'p2' , '2024-10-25' , 'b1' , 'I' ) , 
+( 5 , 'p2' , '2024-10-01' , 'b2' , 'I' ) , 
+( 6 , 'p2' , '2024-09-21' , 'b3' , 'I' ) ; 
+
+
+delimiter$$
+
+create procedure calc_fine(in rollno INT)
+begin
+declare days INT;
+declare fine INT DEFAULT 0;
+declare error INT DEFAULT 0;
+declare issuedt DATE;
+
+select borrowers.issue_date into issuedt from borrowers where borrowers.roll_no = rollno;
+
+set days = DATEDIFF( CURDATE() , issuedt );
+if days <= 30 and days >= 15 then
+    set fine = 5 * days;
+elseif days >30 then
+    set fine = 50 * days;
+else
+    set fine = 0;
+end if;
+
+
+declare exit handler for 1452 set error = 1;
+insert into fines(roll_no, fine_date, amt) values( rollno , CURDATE() , fine ) ; 
+end;
+if error = 1 then
+    select 'Invalid Roll No';
+else
+    update borrowers set status = 'R' where borrowers.roll_no = rollno;
+    select 'Fine amount inserted in table and status updated to R';
+end if;
+
+end $$
+delimiter ;
